@@ -1,0 +1,138 @@
+local P = game:GetService("Players").LocalPlayer
+local RS = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local pgui = P:WaitForChild("PlayerGui")
+
+if pgui:FindFirstChild("TerukumaFull_v10") then pgui.TerukumaFull_v10:Destroy() end
+
+local sg = Instance.new("ScreenGui", pgui)
+sg.Name = "TerukumaFull_v10"
+sg.ResetOnSpawn = false
+
+-- メインフレーム
+local f = Instance.new("Frame", sg)
+f.Size = UDim2.new(0, 140, 0, 160)
+f.Position = UDim2.new(0.5, -70, 0.5, -80)
+f.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+f.BackgroundTransparency = 0.3
+f.Active = true
+Instance.new("UICorner", f)
+
+-- タイトルバー（視点干渉防止）
+local bar = Instance.new("TextButton", f)
+bar.Size = UDim2.new(1, 0, 0, 25)
+bar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+bar.BackgroundTransparency = 0.2
+bar.Text = "てるクマ V4 Final"
+bar.TextColor3 = Color3.new(1, 1, 1)
+bar.Font = Enum.Font.SourceSansBold
+bar.TextSize = 14
+Instance.new("UICorner", bar)
+
+local dragging, dragStart, startPos
+bar.MouseButton1Down:Connect(function()
+    dragging = true
+    dragStart = UIS:GetMouseLocation()
+    startPos = f.Position
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = UIS:GetMouseLocation() - dragStart
+        f.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+
+local function createBtn(text, pos, color)
+    local btn = Instance.new("TextButton", f)
+    btn.Size = UDim2.new(0, 60, 0, 35)
+    btn.Position = pos
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 10
+    Instance.new("UICorner", btn)
+    return btn
+end
+
+local godBtn  = createBtn("GOD",     UDim2.new(0, 7,  0, 32),  Color3.fromRGB(150, 0, 0))
+local fastBtn = createBtn("FAST",    UDim2.new(0, 73, 0, 32),  Color3.fromRGB(0, 0, 150))
+local ragBtn  = createBtn("NO-RAG",  UDim2.new(0, 7,  0, 73),  Color3.fromRGB(100, 100, 0))
+local pushBtn = createBtn("NO-PUSH", UDim2.new(0, 73, 0, 73),  Color3.fromRGB(0, 100, 100))
+local ghBtn   = createBtn("避難:OFF", UDim2.new(0, 7,  0, 115), Color3.fromRGB(50, 50, 50))
+local revBtn  = createBtn("RELOAD",  UDim2.new(0, 73, 0, 115), Color3.fromRGB(50, 0, 50))
+
+local god, fast, rag, push, ghost = false, false, false, false, false
+local fakeChar, lastPos = nil, nil
+local originalTimes = {}
+
+godBtn.MouseButton1Click:Connect(function() god = not god godBtn.BackgroundColor3 = god and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(150, 0, 0) end)
+fastBtn.MouseButton1Click:Connect(function() fast = not fast fastBtn.BackgroundColor3 = fast and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(0, 0, 150) end)
+ragBtn.MouseButton1Click:Connect(function() rag = not rag ragBtn.BackgroundColor3 = rag and Color3.fromRGB(200, 200, 0) or Color3.fromRGB(100, 100, 0) end)
+pushBtn.MouseButton1Click:Connect(function() push = not push pushBtn.BackgroundColor3 = push and Color3.fromRGB(0, 200, 200) or Color3.fromRGB(0, 100, 100) end)
+revBtn.MouseButton1Click:Connect(function() P.Character.Humanoid.Health = 0 end)
+
+ghBtn.MouseButton1Click:Connect(function()
+    ghost = not ghost
+    local char = P.Character
+    local cam = workspace.CurrentCamera
+    if ghost then
+        ghBtn.Text = "避難:ON" ghBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        char.Archivable = true fakeChar = char:Clone() fakeChar.Parent = workspace char.Archivable = false
+        for _, v in pairs(fakeChar:GetDescendants()) do if v:IsA("LocalScript") or v:IsA("Script") then v:Destroy() end end
+        cam.CameraSubject = fakeChar:FindFirstChild("Humanoid")
+    else
+        ghBtn.Text = "避難:OFF" ghBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        if fakeChar and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = fakeChar.HumanoidRootPart.CFrame
+            cam.CameraSubject = char.Humanoid
+            for _, p in pairs(char:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
+            fakeChar:Destroy() fakeChar = nil
+        end
+    end
+end)
+
+RS.Heartbeat:Connect(function()
+    local c = P.Character
+    local h = c and c:FindFirstChild("Humanoid")
+    local hrp = c and c:FindFirstChild("HumanoidRootPart")
+    if not (c and h and hrp) then return end
+
+    if god then
+        if not c:FindFirstChildOfClass("ForceField") then Instance.new("ForceField", c).Visible = false end
+        h.Health = h.MaxHealth
+    else
+        local ff = c:FindFirstChildOfClass("ForceField") if ff then ff:Destroy() end
+    end
+
+    if rag then h.PlatformStand = false h.Sit = false end
+
+    -- 【修正】避難中はNO-PUSHを一時無効化して固まるのを防ぐ
+    if push and not ghost then
+        if h.MoveDirection.Magnitude <= 0 then
+            if lastPos then hrp.CFrame = lastPos end
+            hrp.Velocity = Vector3.new(0, 0, 0)
+        else lastPos = hrp.CFrame end
+    else lastPos = nil end
+
+    if fast then
+        for _, o in pairs(game:GetDescendants()) do
+            if o:IsA("ProximityPrompt") then
+                if not originalTimes[o] then originalTimes[o] = o.HoldDuration end
+                o.HoldDuration = 0
+            end
+        end
+    end
+
+    if ghost and fakeChar and fakeChar:FindFirstChild("HumanoidRootPart") then
+        local fHrp = fakeChar.HumanoidRootPart
+        local fHum = fakeChar:FindFirstChild("Humanoid")
+        hrp.CFrame = fHrp.CFrame * CFrame.new(0, -35, 0)
+        hrp.Velocity = Vector3.new(0, 0, 0)
+        if fHum and h then fHum:Move(h.MoveDirection, false) if h.Jump then fHum.Jump = true end end
+        for _, p in pairs(c:GetChildren()) do if p:IsA("BasePart") then p.CanCollide = false end end
+    end
+end)
